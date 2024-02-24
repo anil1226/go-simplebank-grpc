@@ -48,22 +48,23 @@ type TransferTxResult struct {
 	ToEntry     Entry    `json:"to_entry"`
 }
 
+var txKey = struct{}{}
+
 func (s *Store) TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error) {
 	var res TransferTxResult
 	err := s.execTx(ctx, func(q *Queries) error {
 		var err error
-		res.Transfer, err = q.CreateTransfer(ctx, CreateTransferParams{
-			FromAccountID: arg.FromAccountID,
-			ToAccountID:   arg.ToAccountID,
-			Amount:        arg.Amount,
-		})
+
+		txName := ctx.Value(txKey)
+		fmt.Println(txName)
+		res.Transfer, err = q.CreateTransfer(ctx, CreateTransferParams(arg))
 		if err != nil {
 			return err
 		}
 
 		res.FromEntry, err = q.CreateEntry(ctx, CreateEntryParams{
 			AccountID: arg.FromAccountID,
-			Amount:    arg.Amount,
+			Amount:    -arg.Amount,
 		})
 		if err != nil {
 			return err
@@ -75,10 +76,42 @@ func (s *Store) TransferTx(ctx context.Context, arg TransferTxParams) (TransferT
 		if err != nil {
 			return err
 		}
+
+		if arg.FromAccountID < arg.ToAccountID {
+
+			res.FromAccount, res.ToAccount, err = addMoney(ctx, q, arg.FromAccountID, -arg.Amount, arg.ToAccountID, arg.Amount)
+			if err != nil {
+				return err
+			}
+		} else {
+			res.ToAccount, res.FromAccount, err = addMoney(ctx, q, arg.ToAccountID, arg.Amount, arg.FromAccountID, -arg.Amount)
+			if err != nil {
+				return err
+			}
+		}
+
 		return nil
 	})
 	if err != nil {
 		return TransferTxResult{}, err
 	}
 	return res, err
+}
+
+func addMoney(ctx context.Context, q *Queries, accID1 int64, amount1 int64, accID2 int64, amount2 int64) (acc1 Account, acc2 Account, err error) {
+	acc1, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
+		ID:     accID1,
+		Amount: amount1,
+	})
+	if err != nil {
+		return
+	}
+	acc2, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
+		ID:     accID2,
+		Amount: amount2,
+	})
+	if err != nil {
+		return
+	}
+	return
 }

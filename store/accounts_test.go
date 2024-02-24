@@ -49,7 +49,7 @@ func TestUpdateAccount(t *testing.T) {
 		Balance: util.RandomMoney(),
 	}
 
-	err := testQueries.UpdateAccount(context.Background(), args)
+	_, err := testQueries.UpdateAccount(context.Background(), args)
 	require.NoError(t, err)
 }
 
@@ -61,20 +61,23 @@ func TestDeleteAccount(t *testing.T) {
 }
 
 func TestListAccount(t *testing.T) {
-	for range 10 {
-		createRandomAccount(t)
+	var lastAccount Account
+	for range 3 {
+		lastAccount = createRandomAccount(t)
 	}
 
-	args := ListAccountParams{
+	args := ListAccountsParams{
+		Owner:  lastAccount.Owner,
 		Limit:  5,
-		Offset: 5,
+		Offset: 0,
 	}
 
-	acc, err := testQueries.ListAccount(context.Background(), args)
+	acc, err := testQueries.ListAccounts(context.Background(), args)
 	require.NoError(t, err)
-	require.Len(t, acc, 5)
+	require.NotEmpty(t, acc)
 
 	for _, ac := range acc {
 		require.NotEmpty(t, ac)
+		require.Equal(t, lastAccount.Owner, ac.Owner)
 	}
 }
