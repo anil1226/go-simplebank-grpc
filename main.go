@@ -6,18 +6,18 @@ import (
 
 	"github.com/anil1226/go-simplebank-grpc/api"
 	"github.com/anil1226/go-simplebank-grpc/store"
+	"github.com/anil1226/go-simplebank-grpc/util"
 	_ "github.com/lib/pq"
-)
-
-const (
-	dbDriver      = "postgres"
-	dbSource      = "postgresql://root:secret@localhost:5432/postgres?sslmode=disable"
-	serverAddress = "0.0.0.0:8080"
 )
 
 func main() {
 
-	conn, err := sql.Open(dbDriver, dbSource)
+	config, err := util.LoadConfig(".")
+	if err != nil {
+		log.Fatal("not able to load config")
+	}
+
+	conn, err := sql.Open(config.DbDriver, config.DbSource)
 	if err != nil {
 		log.Fatal("not able to connect to db")
 	}
@@ -26,7 +26,7 @@ func main() {
 
 	server := api.NewServer(store)
 
-	err = server.Start(serverAddress)
+	err = server.Start(config.ServerAddress)
 	if err != nil {
 		log.Fatal("cannot start server")
 	}
