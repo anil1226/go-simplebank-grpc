@@ -4,8 +4,4 @@ metadata:
   name: aws-auth 
   namespace: kube-system 
 data: 
-  mapUsers: | 
-    - userarn: arn:aws:iam::672761589226:user/Sandeep
-      username: Sandeep
-      groups:
-        - system:masters
+  iam-role-arn: arn:aws:iam::672761589226:role/GitHubAction-AssumeRoleWithAction
