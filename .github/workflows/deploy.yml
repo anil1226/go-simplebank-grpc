@@ -4,10 +4,14 @@
 name: Deploy to production
 
 on:
- workflow_run:
-        workflows: ["Run Unit Tests"]
-        types:
-          - completed
+#  workflow_run:
+#         workflows: ["Run Unit Tests"]
+#         types:
+#           - completed
+ push:
+  branches: [ "dev" ]
+ pull_request:
+  branches: [ "dev" ]
 
 permissions:
       id-token: write   # This is required for requesting the JWT

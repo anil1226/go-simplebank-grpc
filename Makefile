@@ -10,7 +10,7 @@ mysql:
 	docker run --name mysql8 -p 3306:3306  -e MYSQL_ROOT_PASSWORD=secret -d mysql:8
 
 createdb:
-	docker exec -it postgres createdb --username=root --owner=root postgres
+	docker exec -it postgres16 createdb --username=root --owner=root postgres
 
 dropdb:
 	docker exec -it postgres dropdb postgres

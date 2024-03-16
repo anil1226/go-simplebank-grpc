@@ -26,10 +26,10 @@ type MyCustomClaims struct {
 	jwt.RegisteredClaims
 }
 
-func (maker *JWTMaker) CreateToken(username string, duration time.Duration) (string, error) {
+func (maker *JWTMaker) CreateToken(username string, duration time.Duration) (string, *Payload, error) {
 	payload, err := NewPayload(username, duration)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	claims := MyCustomClaims{
@@ -41,7 +41,12 @@ func (maker *JWTMaker) CreateToken(username string, duration time.Duration) (str
 		},
 	}
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return jwtToken.SignedString([]byte(maker.secretKey))
+
+	jwtString, err := jwtToken.SignedString([]byte(maker.secretKey))
+	if err != nil {
+		return "", nil, err
+	}
+	return jwtString, payload, nil
 }
 func (maker *JWTMaker) VerifyToken(token string) (*Payload, error) {
 	keyfunc := func(token *jwt.Token) (interface{}, error) {
