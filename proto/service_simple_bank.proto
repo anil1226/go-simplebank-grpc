@@ -12,7 +12,7 @@ option go_package="github.com/anil1226/go-simplebank-grpc/pb";
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
     title: "SimpleBank API";
-    version: "1.0";
+    version: "1.1";
     contact: {
       name: "Anil K";
       url: "https://github.com/anil1226/go-simplebank-grpc";
@@ -28,11 +28,19 @@ service SimpleBank {
                   post: "/v1/create_user"
                   body: "*"
                 };
+                option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+                  description: "Api for Create User";
+                  summary: "Create User";
+                };
     }
     rpc LoginUser (LoginUserRequest) returns (LoginUserResponse){
         option (google.api.http) = {
             post: "/v1/login_user"
             body: "*"
+          };
+          option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            description: "Api for Loigin User";
+            summary: "Login User";
           };
     }
 }

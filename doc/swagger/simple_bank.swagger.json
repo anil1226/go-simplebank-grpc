@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "SimpleBank API",
-    "version": "1.0",
+    "version": "1.1",
     "contact": {
       "name": "Anil K",
       "url": "https://github.com/anil1226/go-simplebank-grpc",
@@ -23,6 +23,8 @@
   "paths": {
     "/v1/create_user": {
       "post": {
+        "summary": "Create User",
+        "description": "Api for Create User",
         "operationId": "SimpleBank_CreateUser",
         "responses": {
           "200": {
@@ -55,6 +57,8 @@
     },
     "/v1/login_user": {
       "post": {
+        "summary": "Login User",
+        "description": "Api for Loigin User",
         "operationId": "SimpleBank_LoginUser",
         "responses": {
           "200": {
