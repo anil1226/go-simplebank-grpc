@@ -65,12 +65,14 @@ func (s *Server) LoginUser(ctx context.Context, in *pb.LoginUserRequest) (*pb.Lo
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	meta := s.extractMetaData(ctx)
+
 	session, err := s.store.CreateSession(ctx, store.CreateSessionParams{
 		ID:           refreshPayload.ID,
 		Username:     in.Username,
 		RefreshToken: refreshToken,
-		UserAgent:    "",
-		ClientIp:     "",
+		UserAgent:    meta.UserAgent,
+		ClientIp:     meta.ClientIP,
 		IsBlocked:    false,
 		ExpiresAt:    refreshPayload.ExpiredAt,
 	})
