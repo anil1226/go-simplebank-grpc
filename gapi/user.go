@@ -7,13 +7,20 @@ import (
 	"github.com/anil1226/go-simplebank-grpc/pb"
 	"github.com/anil1226/go-simplebank-grpc/store"
 	"github.com/anil1226/go-simplebank-grpc/util"
+	"github.com/anil1226/go-simplebank-grpc/val"
 	"github.com/lib/pq"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func (s *Server) CreateUser(ctx context.Context, in *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
+
+	errs := validateCreateUserRequest(in)
+	if errs != nil {
+		return nil, invalidArgumentError(errs)
+	}
 	hPassword, err := util.HashedPassword(in.Password)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -45,6 +52,10 @@ func (s *Server) CreateUser(ctx context.Context, in *pb.CreateUserRequest) (*pb.
 	}, nil
 }
 func (s *Server) LoginUser(ctx context.Context, in *pb.LoginUserRequest) (*pb.LoginUserResponse, error) {
+	errs := validateLoginUserRequest(in)
+	if errs != nil {
+		return nil, invalidArgumentError(errs)
+	}
 	user, err := s.store.GetUser(ctx, in.Username)
 	if err != nil {
 		return nil, status.Error(codes.NotFound, err.Error())
@@ -92,4 +103,30 @@ func (s *Server) LoginUser(ctx context.Context, in *pb.LoginUserRequest) (*pb.Lo
 		},
 	}
 	return resp, nil
+}
+
+func validateCreateUserRequest(in *pb.CreateUserRequest) (violations []*errdetails.BadRequest_FieldViolation) {
+	if err := val.ValidateUsername(in.Username); err != nil {
+		violations = append(violations, fieldViolation("username", err))
+	}
+	if err := val.ValidatePassword(in.Password); err != nil {
+		violations = append(violations, fieldViolation("password", err))
+	}
+	if err := val.ValidateEmail(in.Email); err != nil {
+		violations = append(violations, fieldViolation("email", err))
+	}
+	if err := val.ValidateFullname(in.FullName); err != nil {
+		violations = append(violations, fieldViolation("fullname", err))
+	}
+	return
+}
+
+func validateLoginUserRequest(in *pb.LoginUserRequest) (violations []*errdetails.BadRequest_FieldViolation) {
+	if err := val.ValidateUsername(in.Username); err != nil {
+		violations = append(violations, fieldViolation("username", err))
+	}
+	if err := val.ValidatePassword(in.Password); err != nil {
+		violations = append(violations, fieldViolation("password", err))
+	}
+	return
 }
