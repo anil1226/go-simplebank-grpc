@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -39,6 +40,18 @@ func main() {
 
 	runGRPCServer(config, store)
 
+	//runGinServer(config, store)
+	//basicHttpServer(config, store)
+
+}
+
+func basicHttpServer(config util.Config, store store.Store) {
+	fs := http.FileServer(http.Dir("doc/swagger/"))
+	http.Handle("/swagger/", http.StripPrefix("/swagger/", fs))
+	http.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "hello")
+	})
+	http.ListenAndServe(":8090", nil)
 }
 
 func runGRPCServer(config util.Config, store store.Store) {
@@ -89,15 +102,12 @@ func runGatewayServer(config util.Config, store store.Store) {
 	mux := http.NewServeMux()
 	mux.Handle("/", grpcMux)
 
-	//fs := http.FileServer(http.Dir("./doc/swagger"))
-
 	fs, err := fs.New()
 	if err != nil {
 		log.Fatal("cannot create statik fs")
 	}
 	swagHandler := http.StripPrefix("/swagger/", http.FileServer(fs))
-
-	mux.Handle("/swagger", swagHandler)
+	mux.Handle("/swagger/", swagHandler)
 
 	lister, err := net.Listen("tcp", config.HTTPServerAddress)
 	if err != nil {

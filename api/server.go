@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/anil1226/go-simplebank-grpc/store"
 	"github.com/anil1226/go-simplebank-grpc/token"
@@ -43,6 +44,8 @@ func NewServer(config util.Config, store store.Store) (*Server, error) {
 	authRoutes.GET("/accounts/:id", server.getAccount)
 	authRoutes.GET("/accounts", server.listAccount)
 	authRoutes.POST("/transfers", server.createTransfer)
+
+	router.StaticFS("/swagger", http.Dir("./doc/swagger"))
 
 	server.router = router
 
