@@ -2,7 +2,9 @@ package gapi
 
 import (
 	"context"
+	"database/sql"
 	"log"
+	"time"
 
 	"github.com/anil1226/go-simplebank-grpc/pb"
 	"github.com/anil1226/go-simplebank-grpc/store"
@@ -129,4 +131,79 @@ func validateLoginUserRequest(in *pb.LoginUserRequest) (violations []*errdetails
 		violations = append(violations, fieldViolation("password", err))
 	}
 	return
+}
+
+func validateUpdateUserRequest(in *pb.UpdateUserRequest) (violations []*errdetails.BadRequest_FieldViolation) {
+	if err := val.ValidateUsername(in.Username); err != nil {
+		violations = append(violations, fieldViolation("username", err))
+	}
+	if in.Password != nil {
+		if err := val.ValidatePassword(*in.Password); err != nil {
+			violations = append(violations, fieldViolation("password", err))
+		}
+	}
+	if in.Email != nil {
+		if err := val.ValidateEmail(*in.Email); err != nil {
+			violations = append(violations, fieldViolation("email", err))
+		}
+	}
+	if in.FullName != nil {
+		if err := val.ValidateFullname(*in.FullName); err != nil {
+			violations = append(violations, fieldViolation("fullname", err))
+		}
+	}
+	return
+}
+
+func (s *Server) UpdateUser(ctx context.Context, in *pb.UpdateUserRequest) (*pb.UpdateUserResponse, error) {
+
+	errs := validateUpdateUserRequest(in)
+	if errs != nil {
+		return nil, invalidArgumentError(errs)
+	}
+
+	arg := store.UpdateUserParams{
+		Username: in.Username,
+		FullName: sql.NullString{
+			String: in.GetFullName(),
+			Valid:  in.FullName != nil,
+		},
+		Email: sql.NullString{
+			String: in.GetEmail(),
+			Valid:  in.Email != nil,
+		},
+	}
+
+	if in.Password != nil {
+		hPassword, err := util.HashedPassword(*in.Password)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		arg.HashedPassword = sql.NullString{
+			String: hPassword,
+			Valid:  true,
+		}
+		arg.PasswordChangedAt = sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		}
+	}
+
+	usr, err := s.store.UpdateUser(ctx, arg)
+	if err != nil {
+		if pq, ok := err.(*pq.Error); ok {
+			log.Println(pq.Code.Name())
+			return nil, status.Error(codes.AlreadyExists, err.Error())
+		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &pb.UpdateUserResponse{
+		User: &pb.User{
+			Username:          usr.Username,
+			FullName:          usr.FullName,
+			Email:             usr.Email,
+			PasswordChangedAt: timestamppb.New(usr.PasswordChangedAt),
+			CreatedAt:         timestamppb.New(usr.CreatedAt),
+		},
+	}, nil
 }
