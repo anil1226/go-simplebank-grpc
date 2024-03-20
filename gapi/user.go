@@ -157,9 +157,18 @@ func validateUpdateUserRequest(in *pb.UpdateUserRequest) (violations []*errdetai
 
 func (s *Server) UpdateUser(ctx context.Context, in *pb.UpdateUserRequest) (*pb.UpdateUserResponse, error) {
 
+	payload, err := s.authorizeUser(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+
 	errs := validateUpdateUserRequest(in)
 	if errs != nil {
 		return nil, invalidArgumentError(errs)
+	}
+
+	if payload.Username != in.Username {
+		return nil, status.Error(codes.PermissionDenied, "user not allowed")
 	}
 
 	arg := store.UpdateUserParams{
