@@ -30,14 +30,29 @@ func (s *Server) CreateUser(ctx context.Context, in *pb.CreateUserRequest) (*pb.
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	arg := store.CreateUserParams{
-		Username:       in.Username,
-		HashedPassword: hPassword,
-		FullName:       in.FullName,
-		Email:          in.Email,
+	arg := store.CreateUserTxParams{
+		CreateUserParams: store.CreateUserParams{
+			Username:       in.Username,
+			HashedPassword: hPassword,
+			FullName:       in.FullName,
+			Email:          in.Email,
+		},
+		AfterCreate: func(user store.User) error {
+			taskPayload := &worker.PayLoadSendVerifyEmail{
+				Username: user.Username,
+			}
+
+			opts := []asynq.Option{
+				asynq.MaxRetry(10),
+				asynq.ProcessIn(10 * time.Second),
+				asynq.Queue(worker.QueueCritical),
+			}
+			return s.taskDistributor.DistributeTaskSendVerifyEmail(ctx, taskPayload, opts...)
+
+		},
 	}
 
-	usr, err := s.store.CreateUser(ctx, arg)
+	usr, err := s.store.CreateUserTx(ctx, arg)
 	if err != nil {
 		if pq, ok := err.(*pq.Error); ok {
 			log.Println(pq.Code.Name())
@@ -46,26 +61,13 @@ func (s *Server) CreateUser(ctx context.Context, in *pb.CreateUserRequest) (*pb.
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	taskPayload := &worker.PayLoadSendVerifyEmail{
-		Username: usr.Username,
-	}
-
-	opts := []asynq.Option{
-		asynq.MaxRetry(10),
-		asynq.ProcessIn(10 * time.Second),
-		asynq.Queue(worker.QueueCritical),
-	}
-	err = s.taskDistributor.DistributeTaskSendVerifyEmail(ctx, taskPayload, opts...)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
 	return &pb.CreateUserResponse{
 		User: &pb.User{
-			Username:          usr.Username,
-			FullName:          usr.FullName,
-			Email:             usr.Email,
-			PasswordChangedAt: timestamppb.New(usr.PasswordChangedAt),
-			CreatedAt:         timestamppb.New(usr.CreatedAt),
+			Username:          usr.User.Username,
+			FullName:          usr.User.FullName,
+			Email:             usr.User.Email,
+			PasswordChangedAt: timestamppb.New(usr.User.PasswordChangedAt),
+			CreatedAt:         timestamppb.New(usr.User.CreatedAt),
 		},
 	}, nil
 }
