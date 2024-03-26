@@ -44,7 +44,7 @@ func (rtp *RedisTaskProcessor) ProcessTaskSendVerifyEmail(
 	task *asynq.Task,
 ) error {
 	var payload PayLoadSendVerifyEmail
-	err := json.Unmarshal(task.Payload(), payload)
+	err := json.Unmarshal(task.Payload(), &payload)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal payload: %w", asynq.SkipRetry)
 	}
@@ -60,5 +60,6 @@ func (rtp *RedisTaskProcessor) ProcessTaskSendVerifyEmail(
 		Bytes("payload", task.Payload()).
 		Str("email", user.Email).
 		Msg("process task")
+	//todo: send email
 	return nil
 }

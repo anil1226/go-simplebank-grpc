@@ -10,6 +10,8 @@ import (
 	"github.com/anil1226/go-simplebank-grpc/store"
 	"github.com/anil1226/go-simplebank-grpc/util"
 	"github.com/anil1226/go-simplebank-grpc/val"
+	"github.com/anil1226/go-simplebank-grpc/worker"
+	"github.com/hibiken/asynq"
 	"github.com/lib/pq"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
@@ -41,6 +43,20 @@ func (s *Server) CreateUser(ctx context.Context, in *pb.CreateUserRequest) (*pb.
 			log.Println(pq.Code.Name())
 			return nil, status.Error(codes.AlreadyExists, err.Error())
 		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	taskPayload := &worker.PayLoadSendVerifyEmail{
+		Username: usr.Username,
+	}
+
+	opts := []asynq.Option{
+		asynq.MaxRetry(10),
+		asynq.ProcessIn(10 * time.Second),
+		asynq.Queue(worker.QueueCritical),
+	}
+	err = s.taskDistributor.DistributeTaskSendVerifyEmail(ctx, taskPayload, opts...)
+	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return &pb.CreateUserResponse{
